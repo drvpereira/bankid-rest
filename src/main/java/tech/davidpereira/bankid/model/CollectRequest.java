@@ -1,8 +1,10 @@
-package com.sodexo.bankid.model;
+package tech.davidpereira.bankid.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Data
+@Data @NoArgsConstructor @AllArgsConstructor
 public class CollectRequest {
 
   private String orderRef;

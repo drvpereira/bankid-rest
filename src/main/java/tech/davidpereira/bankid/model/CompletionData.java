@@ -1,4 +1,4 @@
-package com.sodexo.bankid.model;
+package tech.davidpereira.bankid.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;

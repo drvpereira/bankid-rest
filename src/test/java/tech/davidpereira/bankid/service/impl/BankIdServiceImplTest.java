@@ -1,22 +1,20 @@
 package tech.davidpereira.bankid.service.impl;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.http.HttpEntity;
-import org.springframework.web.client.RestClientException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
-import tech.davidpereira.bankid.model.AuthRequest;
-import tech.davidpereira.bankid.model.AuthResponse;
-import tech.davidpereira.bankid.model.CollectRequest;
-import tech.davidpereira.bankid.model.CollectResponse;
+import tech.davidpereira.bankid.model.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.springframework.test.util.ReflectionTestUtils.setField;
 
 public class BankIdServiceImplTest {
 
@@ -24,66 +22,46 @@ public class BankIdServiceImplTest {
     private RestTemplate mockRt;
 
     @InjectMocks
-    private BankIdServiceImpl bankIdServiceImplUnderTest;
+    private BankIdServiceImpl bankIdService;
 
-    @Before
+    private String bankIdUrl = "https://appapi2.test.bankid.com/rp/v5";
+
+    @BeforeEach
     public void setUp() {
         initMocks(this);
+        setField(bankIdService, "bankIdUrl", bankIdUrl);
     }
 
     @Test
     public void testAuth() {
-        // Setup
         final AuthRequest authRequest = new AuthRequest();
-        final AuthResponse expectedResult = new AuthResponse();
-        when(mockRt.postForObject(eq("url"), eq(new HttpEntity<>(null)), eq(AuthResponse.class), any(Object.class))).thenReturn(new AuthResponse());
+        final AuthResponse expectedResult = new AuthResponse("orderRef1", "autoStartToken1");
 
-        // Run the test
-        final AuthResponse result = bankIdServiceImplUnderTest.auth(authRequest);
+        when(mockRt.postForObject(eq(bankIdUrl + "/auth"), eq(getHttpEntity(authRequest)), eq(AuthResponse.class)))
+                .thenReturn(new AuthResponse("orderRef1", "autoStartToken1"));
 
-        // Verify the results
-        assertEquals(expectedResult, result);
-    }
+        final AuthResponse result = bankIdService.auth(authRequest);
 
-    @Test
-    public void testAuth_RestTemplateThrowsRestClientException() {
-        // Setup
-        final AuthRequest authRequest = new AuthRequest();
-        final AuthResponse expectedResult = new AuthResponse();
-        when(mockRt.postForObject(eq("url"), eq(new HttpEntity<>(null)), eq(AuthResponse.class), any(Object.class))).thenThrow(RestClientException.class);
-
-        // Run the test
-        final AuthResponse result = bankIdServiceImplUnderTest.auth(authRequest);
-
-        // Verify the results
         assertEquals(expectedResult, result);
     }
 
     @Test
     public void testCollect() {
-        // Setup
-        final CollectRequest orderRef = new CollectRequest();
-        final CollectResponse expectedResult = new CollectResponse();
-        when(mockRt.postForObject(eq("url"), eq(new HttpEntity<>(null)), eq(CollectResponse.class), any(Object.class))).thenReturn(new CollectResponse());
+        final CollectRequest collectRequest = new CollectRequest();
+        final CollectResponse expectedResult = new CollectResponse("status1", "hintCode1", new CompletionData());
 
-        // Run the test
-        final CollectResponse result = bankIdServiceImplUnderTest.collect(orderRef);
+        when(mockRt.postForObject(eq(bankIdUrl + "/collect"), eq(getHttpEntity(collectRequest)), eq(CollectResponse.class)))
+                .thenReturn(new CollectResponse("status1", "hintCode1", new CompletionData()));
 
-        // Verify the results
+        final CollectResponse result = bankIdService.collect(collectRequest);
+
         assertEquals(expectedResult, result);
     }
 
-    @Test
-    public void testCollect_RestTemplateThrowsRestClientException() {
-        // Setup
-        final CollectRequest orderRef = new CollectRequest();
-        final CollectResponse expectedResult = new CollectResponse();
-        when(mockRt.postForObject(eq("url"), eq(new HttpEntity<>(null)), eq(CollectResponse.class), any(Object.class))).thenThrow(RestClientException.class);
-
-        // Run the test
-        final CollectResponse result = bankIdServiceImplUnderTest.collect(orderRef);
-
-        // Verify the results
-        assertEquals(expectedResult, result);
+    private <T> HttpEntity<T> getHttpEntity(Object request) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new HttpEntity(request, headers);
     }
+
 }

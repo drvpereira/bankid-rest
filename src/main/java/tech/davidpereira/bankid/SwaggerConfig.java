@@ -1,4 +1,4 @@
-package com.sodexo.bankid;
+package tech.davidpereira.bankid;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

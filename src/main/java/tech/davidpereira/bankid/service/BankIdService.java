@@ -1,9 +1,10 @@
-package com.sodexo.bankid.service;
+package tech.davidpereira.bankid.service;
 
-import com.sodexo.bankid.model.AuthRequest;
-import com.sodexo.bankid.model.AuthResponse;
-import com.sodexo.bankid.model.CollectRequest;
-import com.sodexo.bankid.model.CollectResponse;
+
+import tech.davidpereira.bankid.model.AuthRequest;
+import tech.davidpereira.bankid.model.AuthResponse;
+import tech.davidpereira.bankid.model.CollectRequest;
+import tech.davidpereira.bankid.model.CollectResponse;
 
 public interface BankIdService {
 

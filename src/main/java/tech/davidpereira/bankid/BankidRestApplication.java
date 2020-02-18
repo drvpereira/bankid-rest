@@ -1,4 +1,4 @@
-package com.sodexo.bankid;
+package tech.davidpereira.bankid;
 
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClients;

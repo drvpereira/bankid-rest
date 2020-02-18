@@ -1,71 +1,114 @@
 package tech.davidpereira.bankid.controller;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import tech.davidpereira.bankid.model.AuthRequest;
-import tech.davidpereira.bankid.model.AuthResponse;
-import tech.davidpereira.bankid.model.CollectRequest;
-import tech.davidpereira.bankid.model.CollectResponse;
+import org.springframework.web.client.HttpClientErrorException;
+import tech.davidpereira.bankid.model.*;
 import tech.davidpereira.bankid.service.BankIdService;
 
-import static org.junit.Assert.assertEquals;
+import java.nio.charset.Charset;
+
+import static net.glxn.qrgen.javase.QRCode.from;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 public class BankIdControllerTest {
 
     @Mock
-    private BankIdService mockBankIdAdapter;
+    private BankIdService mockBankIdService;
 
     @InjectMocks
-    private BankIdController bankIdControllerUnderTest;
+    private BankIdController bankIdController;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         initMocks(this);
     }
 
     @Test
     public void testAuth() {
-        // Setup
-        final AuthRequest authRequest = new AuthRequest();
-        final ResponseEntity<AuthResponse> expectedResult = new ResponseEntity<>(null);
-        when(mockBankIdAdapter.auth(new AuthRequest())).thenReturn(new AuthResponse());
+        final AuthRequest authRequest = new AuthRequest(null, "10.10.10.10");
+        final ResponseEntity<AuthResponse> expectedResult = ResponseEntity.ok(new AuthResponse("orderRef1", "autoStartToken1"));
 
-        // Run the test
-        final ResponseEntity<AuthResponse> result = bankIdControllerUnderTest.auth(authRequest);
+        when(mockBankIdService.auth(new AuthRequest(null, "10.10.10.10"))).thenReturn(new AuthResponse("orderRef1", "autoStartToken1"));
 
-        // Verify the results
+        final ResponseEntity<AuthResponse> result = bankIdController.auth(authRequest);
+
+        assertEquals(expectedResult, result);
+    }
+
+    @Test
+    public void testAuthWithException() {
+        final AuthRequest authRequest = new AuthRequest(null, "10.10.10.10");
+        final ResponseEntity<AuthResponse> expectedResult = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+
+        when(mockBankIdService.auth(new AuthRequest(null, "10.10.10.10"))).thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+
+        final ResponseEntity<AuthResponse> result = bankIdController.auth(authRequest);
+
         assertEquals(expectedResult, result);
     }
 
     @Test
     public void testQrCode() {
-        // Setup
-        final String autoStartToken = "autoStartToken";
-        final ResponseEntity<byte[]> expectedResult = new ResponseEntity<>(null);
+        final String autoStartToken = "testAutoStartToken";
+        final ResponseEntity<byte[]> expectedResult = ResponseEntity.ok(from(autoStartToken).stream().toByteArray());
 
-        // Run the test
-        final ResponseEntity<byte[]> result = bankIdControllerUnderTest.qrCode(autoStartToken);
+        final ResponseEntity<byte[]> result = bankIdController.qrCode(autoStartToken);
 
-        // Verify the results
         assertEquals(expectedResult, result);
     }
 
     @Test
     public void testCollect() {
-        // Setup
-        final CollectRequest collectRequest = new CollectRequest();
-        final ResponseEntity<CollectResponse> expectedResult = new ResponseEntity<>(null);
-        when(mockBankIdAdapter.collect(new CollectRequest())).thenReturn(new CollectResponse());
+        final CollectRequest collectRequest = new CollectRequest("orderRef1");
+        final ResponseEntity<CollectResponse> expectedResult = ResponseEntity.ok(new CollectResponse("status1", "hintCode1", new CompletionData()));
+        when(mockBankIdService.collect(new CollectRequest("orderRef1"))).thenReturn(new CollectResponse("status1", "hintCode1", new CompletionData()));
 
-        // Run the test
-        final ResponseEntity<CollectResponse> result = bankIdControllerUnderTest.collect(collectRequest);
+        final ResponseEntity<CollectResponse> result = bankIdController.collect(collectRequest);
 
-        // Verify the results
         assertEquals(expectedResult, result);
     }
+
+    @Test
+    public void testCollectWithGeneralException() {
+        final CollectRequest collectRequest = new CollectRequest("orderRef1");
+        final ResponseEntity<CollectResponse> expectedResult = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        when(mockBankIdService.collect(new CollectRequest("orderRef1"))).thenThrow(RuntimeException.class);
+
+        final ResponseEntity<CollectResponse> result = bankIdController.collect(collectRequest);
+
+        assertEquals(expectedResult, result);
+    }
+
+    @Test
+    public void testCollectWithHttpClientException() {
+        final CollectRequest collectRequest = new CollectRequest("orderRef1");
+        final ResponseEntity<CollectResponse> expectedResult = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        when(mockBankIdService.collect(new CollectRequest("orderRef1"))).thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+
+        final ResponseEntity<CollectResponse> result = bankIdController.collect(collectRequest);
+
+        assertEquals(expectedResult, result);
+    }
+
+    @Test
+    public void testCollectWithNoSuchOrderException() {
+        final CollectRequest collectRequest = new CollectRequest("orderRef1");
+        final ResponseEntity<CollectResponse> expectedResult = ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        final HttpClientErrorException exception = new HttpClientErrorException(HttpStatus.BAD_REQUEST, "",
+                "[{\"errorCode\":\"invalidParameters\",\"details\":\"No such order\"}]".getBytes(), Charset.defaultCharset());
+
+        when(mockBankIdService.collect(new CollectRequest("orderRef1"))).thenThrow(exception);
+
+        final ResponseEntity<CollectResponse> result = bankIdController.collect(collectRequest);
+
+        assertEquals(expectedResult, result);
+    }
+
 }
